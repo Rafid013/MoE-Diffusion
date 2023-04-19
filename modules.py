@@ -253,6 +253,65 @@ class UNet_conditional(nn.Module):
         return output
 
 
+class GatedDiffusion(nn.Module):
+    def __init__(self, models, num_experts, input_size, top_k, noise_epsilon=1e-2, device="cuda"):
+        super().__init__()
+        self.device = device
+        self.top_k = top_k
+        self.experts = nn.ModuleList(models).to(device)
+        self.input_size = input_size
+        self.num_experts = num_experts
+        self.noise_epsilon = noise_epsilon
+        
+        self.W_g = nn.Parameter(torch.zeros(self.input_size, self.num_experts), requires_grad=True).to(device)
+        self.W_noise = nn.Parameter(torch.zeros(self.input_size, self.num_experts), requires_grad=True).to(device)
+        
+    def cv_squared(self, x):
+        """The squared coefficient of variation of a sample.
+        Useful as a loss to encourage a positive distribution to be more uniform.
+        Epsilons added for numerical stability.
+        Returns 0 for an empty Tensor.
+        Args:
+        x: a `Tensor`.
+        Returns:
+        a `Scalar`.
+        """
+        eps = 1e-10
+        # if only num_experts = 1
+
+        if x.shape[0] == 1:
+            return torch.tensor([0], device=x.device, dtype=x.dtype)
+        return x.float().var() / (x.float().mean()**2 + eps)
+    
+    def forward(self, x, t, y):
+        clean_values = torch.matmul(y, self.W_g)
+        
+        noisy_values = F.softplus(torch.matmul(y, self.W_noise))
+        noise_stddev = noisy_values + self.noise_epsilon
+        
+        all_values = clean_values + (torch.randn_like(clean_values) * noise_stddev)
+        
+        values, indices = all_values.topk(k=self.top_k, dim=1, largest=True)
+        top_k_values = values[:, :self.top_k + 1]
+        top_k_indices = indices[:, :self.top_k + 1]
+        top_k_gates = F.softmax(top_k_values)
+        zeros = torch.zeros_like(all_values, requires_grad=True)
+        gates = zeros.scatter(1, top_k_indices, top_k_gates)
+        importance = gates.sum(0)
+        loss = self.cv_squared(importance)
+        
+        expert_outputs = [expert(x, t) for expert in self.experts]
+#         expert_outputs = [torch.randn((64, 64, 3, 128)).to(self.device) for i in range(self.num_experts)]
+        print(expert_outputs[0].size())
+        total_gated_output = torch.zeros_like(expert_outputs[0]).to(self.device)
+        for i in range(self.num_experts):
+            loads = gates[:, i]  # the load for expert i for this batch
+            gated_output = loads.mul(expert_outputs[i])
+            total_gated_output += gated_output
+        return total_gated_output, loss
+            
+
+
 if __name__ == '__main__':
     # net = UNet(device="cpu")
     net = UNet_conditional(num_classes=10, device="cpu")
