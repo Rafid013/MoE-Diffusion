@@ -107,6 +107,8 @@ def train_gated(args):
 
         if epoch % 10 == 0:
             labels = torch.arange(10).long().to(device)
+            y = F.one_hot(labels, args.num_classes).float()
+            y_padded = F.pad(y, ((text_vect_size - args.num_classes)//2, (text_vect_size - args.num_classes)//2))
             sampled_images = diffusion.sample(gated_net, n=len(labels), y_padded)
             # ema_sampled_images = diffusion.sample(ema_model, n=len(labels), labels=labels)
             plot_images(sampled_images)
