@@ -20,13 +20,12 @@ class Diffusion:
         self.noise_steps = noise_steps
         self.beta_start = beta_start
         self.beta_end = beta_end
+        self.img_size = img_size
+        self.device = device
 
         self.beta = self.prepare_noise_schedule().to(device)
         self.alpha = 1. - self.beta
         self.alpha_hat = torch.cumprod(self.alpha, dim=0)
-
-        self.img_size = img_size
-        self.device = device
 
     def prepare_noise_schedule(self):
         return torch.linspace(self.beta_start, self.beta_end, self.noise_steps)
@@ -40,17 +39,14 @@ class Diffusion:
     def sample_timesteps(self, n):
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
 
-    def sample(self, model, n, labels, cfg_scale=3):
+    def sample(self, model, n, y):
         logging.info(f"Sampling {n} new images....")
         model.eval()
         with torch.no_grad():
             x = torch.randn((n, 3, self.img_size, self.img_size)).to(self.device)
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                predicted_noise = model(x, t, labels)
-                if cfg_scale > 0:
-                    uncond_predicted_noise = model(x, t, None)
-                    predicted_noise = torch.lerp(uncond_predicted_noise, predicted_noise, cfg_scale)
+                predicted_noise = model(x, t, y)
                 alpha = self.alpha[t][:, None, None, None]
                 alpha_hat = self.alpha_hat[t][:, None, None, None]
                 beta = self.beta[t][:, None, None, None]
@@ -103,7 +99,7 @@ def train_gated(args):
             loss = mse(noise, predicted_noise) + args.gated_loss_factor*aux_loss
 
             optimizer.zero_grad()
-            loss.backward()
+#             loss.backward()
             optimizer.step()
 
             pbar.set_postfix(Loss=loss.item())
@@ -111,7 +107,7 @@ def train_gated(args):
 
         if epoch % 10 == 0:
             labels = torch.arange(10).long().to(device)
-            sampled_images = diffusion.sample(model, n=len(labels), labels=labels)
+            sampled_images = diffusion.sample(gated_net, n=len(labels), y_padded)
             # ema_sampled_images = diffusion.sample(ema_model, n=len(labels), labels=labels)
             plot_images(sampled_images)
             save_images(sampled_images, os.path.join("results", args.run_name, f"{epoch}.jpg"))
