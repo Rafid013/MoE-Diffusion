@@ -106,8 +106,8 @@ def train_gated(args):
             loss.backward()
             optimizer.step()
 
-            pbar.set_postfix(MSE=loss.item())
-            logger.add_scalar("MSE", loss.item(), global_step=epoch * l + i)
+            pbar.set_postfix(Loss=loss.item())
+            logger.add_scalar("Loss", loss.item(), global_step=epoch * l + i)
 
         if epoch % 10 == 0:
             labels = torch.arange(10).long().to(device)
@@ -125,7 +125,7 @@ def launch():
     import argparse
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
-    args.epochs = 1
+    args.epochs = 500
     args.batch_size = 128
     args.image_size = 64
     args.num_classes = 10
@@ -133,8 +133,8 @@ def launch():
     args.device = "cuda"
     args.lr = 3e-4
     args.max_classes = 3
-    args.num_experts = 1
-    args.top_k = 1
+    args.num_experts = 4
+    args.top_k = 2
     args.gated_loss_factor = 1e-2
     args.run_name = "DDPM_MoE"
     train_gated(args)

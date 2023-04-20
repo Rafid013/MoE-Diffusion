@@ -301,12 +301,13 @@ class GatedDiffusion(nn.Module):
         loss = self.cv_squared(importance)
         
         expert_outputs = [expert(x, t) for expert in self.experts]
-#         expert_outputs = [torch.randn((64, 64, 3, 128)).to(self.device) for i in range(self.num_experts)]
-        print(expert_outputs[0].size())
+#         expert_outputs = [torch.randn((128, 3, 64, 64)).to(self.device) for i in range(self.num_experts)]
         total_gated_output = torch.zeros_like(expert_outputs[0]).to(self.device)
         for i in range(self.num_experts):
             loads = gates[:, i]  # the load for expert i for this batch
-            gated_output = loads.mul(expert_outputs[i])
+            expert_out_perm = torch.permute(expert_outputs[i], (1, 2, 3, 0))
+            gated_output = loads.mul(expert_out_perm)
+            gated_output = torch.permute(gated_output, (3, 0, 1, 2))
             total_gated_output += gated_output
         return total_gated_output, loss
             

@@ -3,7 +3,7 @@ import torch
 import torchvision
 from PIL import Image
 from matplotlib import pyplot as plt
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 
 def plot_images(images):
@@ -28,7 +28,21 @@ def get_data(args):
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
+    dataset = torchvision.datasets.ImageFolder(args.dataset_path, transform=transforms) 
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    return dataloader
+
+
+def get_data_label(args):
+    label = args.label
+    transforms = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(80),  # args.image_size + 1/4 *args.image_size
+        torchvision.transforms.RandomResizedCrop(args.image_size, scale=(0.8, 1.0)),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
     dataset = torchvision.datasets.ImageFolder(args.dataset_path, transform=transforms)
+    idx = [i for i in range(len(dataset)) if dataset.imgs[i][1] == dataset.class_to_idx['class' + str(label)]]
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     return dataloader
 

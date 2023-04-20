@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import copy
 import numpy as np
@@ -118,7 +119,7 @@ def launch():
     args.batch_size = 14
     args.image_size = 64
     args.num_classes = 10
-    args.dataset_path = r"C:\Users\dome\datasets\cifar10\cifar10-64\train"
+    args.dataset_path = "./cifar10-64/train"
     args.device = "cuda"
     args.lr = 3e-4
     train(args)
