@@ -46,7 +46,7 @@ class Diffusion:
             x = torch.randn((n, 3, self.img_size, self.img_size)).to(self.device)
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                predicted_noise = model(x, t, y)
+                predicted_noise, _ = model(x, t, y)
                 alpha = self.alpha[t][:, None, None, None]
                 alpha_hat = self.alpha_hat[t][:, None, None, None]
                 beta = self.beta[t][:, None, None, None]
@@ -138,8 +138,42 @@ def launch():
     train_gated(args)
 
 
+def sample():
+    run_name = 'DDPM_MoE'
+    top_k = 2
+    num_experts = 4
+    max_classes = 3
+    num_classes = 10
+    models = []
+    for i in range(args.num_experts):
+        models.append(UNet().to(device))
+    
+    text_vect_size = max_classes*num_classes
+    
+    gated_net = GatedDiffusion(models=models, num_experts=num_experts,
+                               input_size=text_vect_size, top_k=top_k).to(device)
+    gated_net.load_state_dict(torch.load(os.path.join("models", run_name, f"ckpt.pt")))
+    
+    optimizer = optim.AdamW(gated_net.parameters(), lr=args.lr)
+    optimizer.load_state_dict(torch.load(os.path.join("models", run_name, f"optim.pt")))
+    
+    gated_net.eval()
+    
+    epoch = 100
+    labels = torch.randint(low=0, high=10, size(10, 2)).long().to(device)
+    print(labels)
+    y = F.one_hot(labels, args.num_classes).float()
+    print(y)
+    y_padded = F.pad(y, ((text_vect_size - args.num_classes*2)//2, (text_vect_size - args.num_classes*2)//2))
+    sampled_images = diffusion.sample(gated_net, n=len(labels), y=y_padded)
+    # ema_sampled_images = diffusion.sample(ema_model, n=len(labels), labels=labels)
+    plot_images(sampled_images)
+    save_images(sampled_images, os.path.join("results", run_name, f"{epoch}.jpg"))
+
+
 if __name__ == '__main__':
-    launch()
+#     launch()
+    sample()
     # device = "cuda"
     # model = UNet_conditional(num_classes=10).to(device)
     # ckpt = torch.load("./models/DDPM_conditional/ckpt.pt")
