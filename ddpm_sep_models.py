@@ -124,7 +124,7 @@ def launch():
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     args.epochs = 500
-    args.batch_size = 128
+    args.batch_size = 32
     args.image_size = 64
     args.num_classes = 10
     args.dataset_path = "./cifar10-64/train"
@@ -134,18 +134,23 @@ def launch():
     args.num_experts = 4
     args.top_k = 2
     args.gated_loss_factor = 1e-2
-    args.run_name = "DDPM_MoE"
+    args.run_name = "DDPM_MoE_1"
     train_gated(args)
 
 
-def sample():
-    run_name = 'DDPM_MoE'
+def sample(device='cuda'):
+    run_name = 'DDPM_MoE_1'
     top_k = 2
     num_experts = 4
     max_classes = 3
     num_classes = 10
+    image_size = 64
+    lr = 3e-4
+    
+    setup_logging(run_name)
+    
     models = []
-    for i in range(args.num_experts):
+    for i in range(num_experts):
         models.append(UNet().to(device))
     
     text_vect_size = max_classes*num_classes
@@ -154,26 +159,32 @@ def sample():
                                input_size=text_vect_size, top_k=top_k).to(device)
     gated_net.load_state_dict(torch.load(os.path.join("models", run_name, f"ckpt.pt")))
     
-    optimizer = optim.AdamW(gated_net.parameters(), lr=args.lr)
+    optimizer = optim.AdamW(gated_net.parameters(), lr=lr)
     optimizer.load_state_dict(torch.load(os.path.join("models", run_name, f"optim.pt")))
     
     gated_net.eval()
     
     epoch = 100
-    labels = torch.randint(low=0, high=10, size(10, 2)).long().to(device)
-    print(labels)
-    y = F.one_hot(labels, args.num_classes).float()
-    print(y)
-    y_padded = F.pad(y, ((text_vect_size - args.num_classes*2)//2, (text_vect_size - args.num_classes*2)//2))
-    sampled_images = diffusion.sample(gated_net, n=len(labels), y=y_padded)
+    labels1 = torch.randint(low=0, high=10, size=(10,)).long().to(device)
+    labels2 = torch.randint(low=0, high=10, size=(10,)).long().to(device)
+    
+    print(labels1)
+    print(labels2)
+    
+    y1 = F.one_hot(labels1, num_classes).float()
+    y2 = F.one_hot(labels2, num_classes).float()
+    y = torch.cat((y1, y2), dim=1)
+    y_padded = F.pad(y, (0, (text_vect_size - num_classes*2)))
+    diffusion = Diffusion(img_size=image_size, device=device)
+    sampled_images = diffusion.sample(gated_net, n=len(labels1), y=y_padded)
     # ema_sampled_images = diffusion.sample(ema_model, n=len(labels), labels=labels)
     plot_images(sampled_images)
     save_images(sampled_images, os.path.join("results", run_name, f"{epoch}.jpg"))
 
 
 if __name__ == '__main__':
-#     launch()
-    sample()
+    launch()
+#     sample()
     # device = "cuda"
     # model = UNet_conditional(num_classes=10).to(device)
     # ckpt = torch.load("./models/DDPM_conditional/ckpt.pt")
