@@ -99,7 +99,7 @@ def train_gated(args):
             loss = mse(noise, predicted_noise) + args.gated_loss_factor*aux_loss
 
             optimizer.zero_grad()
-#             loss.backward()
+            loss.backward()
             optimizer.step()
 
             pbar.set_postfix(Loss=loss.item())
