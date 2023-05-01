@@ -11,6 +11,7 @@ from utils import *
 from modules import UNet, GatedDiffusion
 import logging
 from torch.utils.tensorboard import SummaryWriter
+import os
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
 
@@ -81,6 +82,10 @@ def train_gated(args):
                                input_size=text_vect_size, top_k=args.top_k).to(device)
     
     optimizer = optim.AdamW(gated_net.parameters(), lr=args.lr)
+    
+    if os.path.exists(os.path.join("models", args.run_name, f"ckpt.pt")):
+        gated_net.load_state_dict(torch.load(os.path.join("models", args.run_name, f"ckpt.pt")))
+        optimizer.load_state_dict(torch.load(os.path.join("models", args.run_name, f"optim.pt")))
     
     for epoch in range(args.epochs):
         logging.info(f"Starting epoch {epoch}:")
