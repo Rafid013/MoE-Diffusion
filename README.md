@@ -1,5 +1,8 @@
 # Dataset Download
-The CIFAR-10 64x64 dataset has to be downloaded from this [link](https://www.kaggle.com/datasets/joaopauloschuler/cifar10-64x64-resized-via-cai-super-resolution). This cannot be downloaded without logging in to the website. That's why we are not adding a download script for this dataset. After downloading the dataset, it has to be unzipped to the main project folder. After unzipping, there should be two resultant folders at the locations *MoE-Diffusion/cifar10-32/* and *MoE-Diffusion/cifar10-64*. To get the file to ARC, we downloaded the dataset to our PC and then used the SCP command to upload it to ARC.
+The CIFAR-10 64x64 dataset has to be downloaded from this [link](https://www.kaggle.com/datasets/joaopauloschuler/cifar10-64x64-resized-via-cai-super-resolution). This cannot be downloaded without logging in to the website. That's why we are not adding a download script for this dataset. After downloading the dataset, it has to be unzipped to the main project folder. After unzipping, there should be two resultant folders at the following locations
+*MoE-Diffusion/cifar10-32/*
+*MoE-Diffusion/cifar10-64*
+To get the file to ARC, we downloaded the dataset to our PC and then used the SCP command to upload it to ARC.
 
 # Required Installation
 The following installations are required.
