@@ -310,7 +310,7 @@ class GatedDiffusion(nn.Module):
             gated_output = torch.permute(gated_output, (3, 0, 1, 2))
             total_gated_output += gated_output
         return total_gated_output, loss
-            
+
 
 
 if __name__ == '__main__':
